@@ -2,7 +2,8 @@
 param (
     [int]$buildNumber = $(throw "-buildNumber is required."), # the build version, from VSTS build i.e. "974"
     [string]$filePath = $(throw "-filePath is required."), #$PSScriptRoot, # path to the file i.e. 'C:\Users\ben\Code\csproj powershell\MySmallLibrary.csproj'
-    [string]$type = $(throw "-type is required. |csproj|nuspec|csprojnuspec|js|ts|") # path to the file i.e. 'C:\Users\ben\Code\csproj powershell\MySmallLibrary.nuspec'
+    [string]$type = $(throw "-type is required. |csproj|nuspec|csprojnuspec|js|ts|"), # path to the file i.e. 'C:\Users\ben\Code\csproj powershell\MySmallLibrary.nuspec'
+    [bool]$exposeVSOProjectVersion = $false # exposing calculated project version to VSTS build variable ProjectVersion
 )
 
 
@@ -58,6 +59,8 @@ function SetCsprojNuspecBuildVersion ([string]$currentFileType, [string]$current
 	
 	$oldSplitNumber = $oldBuildString.Split(".")
     $myBuildNumber = $oldSplitNumber[0] + "." + $oldSplitNumber[1] + "." + $oldSplitNumber[2] + "." + $revisionNumber
+    # For Azure Universal Packages: SemVer 2.0 with prerelease suffix (e.g. 1.4.9-123)
+    $myPackageVersion = $oldSplitNumber[0] + "." + $oldSplitNumber[1] + "." + $oldSplitNumber[2] + "-" + $revisionNumber
     
 	#$oldAssemblyVersionSplit = $oldAssemblyVersion.Split(".")
     #$myAssemblyVersion = $oldAssemblyVersionSplit[0] + "." + $oldAssemblyVersionSplit[1] + "." + $oldAssemblyVersionSplit[2] + "." + $revisionNumber
@@ -86,6 +89,12 @@ function SetCsprojNuspecBuildVersion ([string]$currentFileType, [string]$current
     $xml.Save($currentFilePath)
 
     Write-Host "Updated "$currentFilePath" and set build to version: "$myBuildNumber
+
+    if($exposeVSOProjectVersion)
+    {
+        Write-Host "##vso[task.setvariable variable=ProjectVersion;isOutput=true]$myPackageVersion"
+        Write-Host "ProjectVersion set to: $myPackageVersion"
+    }
 }
 
 function SetJSTSBuildVersion ([string]$currentFileType, [string]$currentFilePath)
